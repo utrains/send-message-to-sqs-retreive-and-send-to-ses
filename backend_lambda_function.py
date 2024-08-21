@@ -40,7 +40,7 @@ def send_sqs_message(QueueName, msg_body,orderId):
 
 def lambda_handler(event, context):
     print(event)
-    QueueName = 'food-odering-queue.fifo'
+    QueueName = 'food-ordering-queue.fifo'
     logger.info(event) #log the request event to see how the request looks like
     httpMethod = event['httpMethod'] #extract the http method from our event object
     path = event['path'] #extract the path
