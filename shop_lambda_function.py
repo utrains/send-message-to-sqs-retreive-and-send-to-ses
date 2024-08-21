@@ -1,51 +1,67 @@
 from __future__ import print_function
 import time
-
-import os
 import boto3
 from botocore.exceptions import ClientError
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 
-#function to send email
-def send_email(message):
-    SENDER = "estephe.kana@utrains.org" # must be verified in AWS SES Email
-    RECIPIENT = "kanaestephe@gmail.com" # must be verified in AWS SES Email
+# Function to send email
 
-    # If necessary, replace us-west-1 with the AWS Region you're using for Amazon SES.
+def send_email(message):
+    SENDER = "estephe.kana@utrains.org"  # Must be verified in AWS SES Email
+    RECIPIENT = "kanaestephe@gmail.com"  # Must be verified in AWS SES Email
+
+    # Replace with the AWS Region you're using for Amazon SES.
     AWS_REGION = "us-west-1"
 
     # The subject line for the email.
-    SUBJECT = "this order is destined for shop1!!"
+    SUBJECT = "This order is destined for shop1!!"
 
     # The email body for recipients with non-HTML email clients.
-    BODY_TEXT = ("Hey Hi...\r\n"
-                "here is an oder \n {message} "
-                "\n thankyou"
-                ).format(message=message)
-                
+    BODY_TEXT = f"""Hey Hi...\r\n
+                 Here is an order:\n {message} \n
+                 Thank you!"""
+                 
+
     # The HTML body of the email.
-    BODY_HTML = """<html>
-    <head>order from website </head>
+    BODY_HTML = f"""
+    <html>
+    <head></head>
     <body>
-    <h1>Hey Hi...</h1>
-    <p>There is  a clients order
-        <a href=''>{message}</a> using the
-        </p>
+        <h1>Hey Hi,</h1>
+        <p>Here is an order:</p>
+        <p><strong>{message}</strong></p>
+        <p>Thank you!</p>
     </body>
     </html>
-                """.format(message=message)            
-
+    """
     # The character encoding for the email.
     CHARSET = "UTF-8"
 
     # Create a new SES resource and specify a region.
-    client = boto3.client('ses',region_name=AWS_REGION)
+    client = boto3.client('ses', region_name=AWS_REGION)
+
+    # Check if the configuration set is set or create it
+    try:
+        response = client.create_configuration_set(
+            ConfigurationSet={
+                'Name': 'my-config-set'
+            }
+        )
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ConfigurationSetAlreadyExists':
+            print("Configuration set already exists.")
+        else:
+            print(f"Error creating configuration set: {e.response['Error']['Message']}")
+            return
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        return
 
     # Try to send the email.
     try:
-        #Provide the contents of the email.
+        # Provide the contents of the email.
         response = client.send_email(
             Destination={
                 'ToAddresses': [
@@ -55,35 +71,32 @@ def send_email(message):
             Message={
                 'Body': {
                     'Html': {
-        
+                        'Charset': CHARSET,
                         'Data': BODY_HTML
                     },
                     'Text': {
-        
+                        'Charset': CHARSET,
                         'Data': BODY_TEXT
                     },
                 },
                 'Subject': {
-
+                    'Charset': CHARSET,
                     'Data': SUBJECT
                 },
             },
-            Source=SENDER
+            Source=SENDER,
+            ConfigurationSetName='my-config-set',
         )
-    # Display an error if something goes wrong.	
     except ClientError as e:
         print(e.response['Error']['Message'])
     else:
-        print("Email sent! Message ID:"),
-        print(response['MessageId'])
-
+        print("Email sent! Message ID:", response['MessageId'])
 
 
 def lambda_handler(event, context):
     for record in event['Records']:
-        print("test")
         payload = record["body"]
-        print(str(payload))
+        print("Payload:", payload)
         send_email(payload)
-    print("shop1")
+    print("Shop1 processing complete")
     time.sleep(5)
